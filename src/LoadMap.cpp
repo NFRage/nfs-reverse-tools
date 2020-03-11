@@ -157,6 +157,7 @@ int idaapi init(void)
     case f_LX:
     case f_ELF:
     case f_EXE:
+    case f_LOADER:
         return PLUGIN_KEEP;
     }
     return PLUGIN_SKIP;
@@ -453,7 +454,7 @@ void idaapi term(void)
 char wanted_name[]   = "Load Symbols From MAP File";
 char wanted_hotkey[] = "Ctrl-M";
 char comment[]       = "LoadMap loads symbols from a VC/BC/Watcom/Dede map file.";
-char help[]          = "LoadMap "PLUG_VERSION", Visual C/Borland C/Watcom C/Dede map file import plugin."
+char help[]          = "LoadMap, Visual C/Borland C/Watcom C/Dede map file import plugin."
                               "This module reads selected map file, and loads symbols\n"
                               "into IDA database. Click it while holding Shift to see options.";
 /// @}
