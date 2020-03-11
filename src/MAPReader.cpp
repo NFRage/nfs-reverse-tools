@@ -274,14 +274,33 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
         return MapFile::COMMENT_LINE;
     }
     sym.addr = -1;
-    int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
-    std::free(dupLine);
-    if (3 != ret)
+    unsigned long full_addr = 0;
+    sym.type = ' ';
+    char filename[512 + 1];
+
+    // Try reading symbol info with symbol type + filename
+    int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;] %08X %c %[^\t\n ;]", &sym.seg, &sym.addr, sym.name, &full_addr, &sym.type, filename);
+    if (6 != ret)
     {
-        // we have parsed to end of value/name symbols table or reached EOF
-        return MapFile::FINISHING_LINE;
+      // Failed, try just info with filename
+      sym.type = ' ';
+      int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;] %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name, &full_addr, filename);
+      if (5 != ret)
+      {
+        // Failed, just try reading info
+        sym.type = ' ';
+        ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
+        if (3 != ret)
+        {
+          // Failed, we must have parsed to end of value/name symbols table or reached EOF
+          std::free(dupLine);
+          return MapFile::FINISHING_LINE;
+        }
+      }
     }
-    else if ((0 == sym.seg) || (--sym.seg >= numOfSegs) ||
+    std::free(dupLine);
+
+    if ((0 == sym.seg) || (--sym.seg >= numOfSegs) ||
             (-1 == sym.addr) || (std::strlen(sym.name) == 0) )
     {
         return MapFile::INVALID_LINE;

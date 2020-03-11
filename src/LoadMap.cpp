@@ -43,6 +43,7 @@
 #include <entry.hpp>
 #include <fpro.h>
 #include <prodir.h> // just for MAXPATH
+#include <auto.hpp>
 
 
 typedef struct _tagPLUGIN_OPTIONS {
@@ -383,6 +384,11 @@ bool idaapi run(size_t)
                             sym.seg, la, pname);
                         invalidSyms++;
                     }
+                }
+                if (sym.type == 'f')
+                {
+                  auto_recreate_insn(la);
+                  auto_make_proc(la);
                 }
             }
             else if (g_options.bReplace || !has_cmt(f))

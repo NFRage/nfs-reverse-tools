@@ -18,7 +18,7 @@
 
 #include  <cstdio>
 
-#define MAXNAMELEN      512
+#define MAXNAMELEN      2048
 #define INVALID_MAPFILE_SIZE	(0xffffffff)
 
 namespace MapFile {
@@ -51,6 +51,7 @@ typedef struct {
     unsigned long seg;
     unsigned long addr;
     char name[MAXNAMELEN + 1];
+    char type;
 } MAPSymbol;
 
 void closeMAP(const void * lpAddr);
