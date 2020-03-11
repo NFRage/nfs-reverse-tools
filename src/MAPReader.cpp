@@ -250,6 +250,14 @@ MapFile::SectionType MapFile::recognizeSectionEnd(MapFile::SectionType secType, 
 ////////////////////////////////////////////////////////////////////////////////
 MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs)
 {
+    // Skip any entrypoint / "static symbols" lines
+    const char* testStr = "entry point at";
+    if(strncasecmp(pLine, testStr, strlen(testStr)) == 0)
+      return MapFile::SKIP_LINE;
+    const char* testStr2 = "Static symbols";
+    if (strncasecmp(pLine, testStr2, strlen(testStr2)) == 0)
+      return MapFile::SKIP_LINE;
+
     // Get segment number, address, name, by pass spaces at beginning,
     // between ':' character, between address and name
     long lineCut = lineLen;
