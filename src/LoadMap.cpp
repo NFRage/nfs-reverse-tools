@@ -88,8 +88,79 @@ BOOL IsXboxLibraryFile(const char* filename)
   // eww.. for some reason this is the fastest method to check all these..
 
   if (inf.filetype != f_LOADER)
-    return false; // only valid for xbox360 libraries (which require a loader)
+    return false; // only valid for xbox/xbox360 libraries (which require a loader)
 
+  /* Xbox OG libraries */
+  const char* lib_d3d8_xbox = "d3d8-xbox:";
+  const char* lib_D3D8 = "D3D8:";
+  const char* lib_D3DX8 = "D3DX8:";
+  const char* lib_D3DX8d = "D3DX8d:";
+  const char* lib_d3dx8dt = "d3dx8dt:";
+  const char* lib_d3dxof = "d3dxof:";
+  const char* lib_dxguid = "dxguid:";
+  const char* lib_winhttp5 = "winhttp5:";
+  const char* lib_xboxdbg = "xboxdbg:";
+  const char* lib_xcontent = "xcontent:";
+  const char* lib_xgraphics = "xgraphics:";
+  const char* lib_xonservr = "xonservr:";
+  const char* lib_d3d8d = "d3d8d:";
+  const char* lib_d3d8i = "d3d8i:";
+  const char* lib_d3d8ltcg = "d3d8ltcg:";
+  const char* lib_dmusic = "dmusic:";
+  const char* lib_dmusicd = "dmusicd:";
+  const char* lib_dmusici = "dmusici:";
+  const char* lib_dmusicltcg = "dmusicltcg:";
+  const char* lib_dsound = "dsound:";
+  const char* lib_dsoundd = "dsoundd:";
+  const char* lib_libc = "libc:";
+  const char* lib_libcd = "libcd:";
+  const char* lib_libcmt = "libcmt:";
+  const char* lib_libcmtd = "libcmtd:";
+  const char* lib_libcp = "libcp:";
+  const char* lib_libcpd = "libcpd:";
+  const char* lib_libcpmt = "libcpmt:";
+  const char* lib_libcpmtd = "libcpmtd:";
+  const char* lib_oldnames = "oldnames:";
+  const char* lib_uix = "uix:";
+  const char* lib_uixd = "uixd:";
+  const char* lib_uuid = "uuid:";
+  const char* lib_xacteng = "xacteng:";
+  const char* lib_xactengd = "xactengd:";
+  const char* lib_xactengi = "xactengi:";
+  const char* lib_xactengltcg = "xactengltcg:";
+  const char* lib_xapilib = "xapilib:";
+  const char* lib_xapilibd = "xapilibd:";
+  const char* lib_xbdm = "xbdm:";
+  const char* lib_xboxkrnl = "xboxkrnl:";
+  const char* lib_xgraphicsd = "xgraphicsd:";
+  const char* lib_xgraphicsltcg = "xgraphicsltcg:";
+  const char* lib_xkbd = "xkbd:";
+  const char* lib_xkbdd = "xkbdd:";
+  const char* lib_xmv = "xmv:";
+  const char* lib_xmvd = "xmvd:";
+  const char* lib_xnet = "xnet:";
+  const char* lib_xnetd = "xnetd:";
+  const char* lib_xnetn = "xnetn:";
+  const char* lib_xnetnd = "xnetnd:";
+  const char* lib_xnets = "xnets:";
+  const char* lib_xnetsd = "xnetsd:";
+  const char* lib_xonline = "xonline:";
+  const char* lib_xonlined = "xonlined:";
+  const char* lib_xonlinel = "xonlinel:";
+  const char* lib_xonlineld = "xonlineld:";
+  const char* lib_xonlinels = "xonlinels:";
+  const char* lib_xonlinelsd = "xonlinelsd:";
+  const char* lib_xonlinen = "xonlinen:";
+  const char* lib_xonlinend = "xonlinend:";
+  const char* lib_xonlines = "xonlines:";
+  const char* lib_xonlinesd = "xonlinesd:";
+  const char* lib_xperf = "xperf:";
+  const char* lib_xsndtrk = "xsndtrk:";
+  const char* lib_xsndtrkd = "xsndtrkd:";
+  const char* lib_xvoice = "xvoice:";
+  const char* lib_xvoiced = "xvoiced:";
+
+  /* Xbox 360 libraries */
   const char* lib_d3d9 = "d3d9:";
   const char* lib_d3d9d = "d3d9d:";
   const char* lib_d3d9i = "d3d9i:";
@@ -117,7 +188,7 @@ BOOL IsXboxLibraryFile(const char* filename)
   const char* lib_nuihandlesd = "nuihandlesd:";
   const char* lib_nuispeech = "nuispeech:";
   const char* lib_nuispeechd = "nuispeechd:";
-  const char* lib_oldnames = "oldnames:";
+  //const char* lib_oldnames = "oldnames:";
   const char* lib_qnetxaudio2 = "qnetxaudio2:";
   const char* lib_qnetxaudio2d = "qnetxaudio2d:";
   const char* lib_st = "st:";
@@ -137,8 +208,8 @@ BOOL IsXboxLibraryFile(const char* filename)
   const char* lib_xacta3 = "xacta3:";
   const char* lib_xactad3 = "xactad3:";
   const char* lib_xactd3 = "xactd3:";
-  const char* lib_xapilib = "xapilib:";
-  const char* lib_xapilibd = "xapilibd:";
+  //const char* lib_xapilib = "xapilib:";
+  //const char* lib_xapilibd = "xapilibd:";
   const char* lib_xapilibi = "xapilibi:";
   const char* lib_XAPOBase = "XAPOBase:";
   const char* lib_XAPOBaseD = "XAPOBaseD:";
@@ -155,16 +226,16 @@ BOOL IsXboxLibraryFile(const char* filename)
   const char* lib_xavd = "xavd:";
   const char* lib_xbc = "xbc:";
   const char* lib_xbcd = "xbcd:";
-  const char* lib_xbdm = "xbdm:";
-  const char* lib_xboxkrnl = "xboxkrnl:";
+  //const char* lib_xbdm = "xbdm:";
+  //const char* lib_xboxkrnl = "xboxkrnl:";
   const char* lib_xcam = "xcam:";
   const char* lib_xcamd = "xcamd:";
   const char* lib_xffb = "xffb:";
   const char* lib_xffbd = "xffbd:";
   const char* lib_xgetserviceendpoint = "xgetserviceendpoint:";
   const char* lib_xgetserviceendpointd = "xgetserviceendpointd:";
-  const char* lib_xgraphics = "xgraphics:";
-  const char* lib_xgraphicsd = "xgraphicsd:";
+  //const char* lib_xgraphics = "xgraphics:";
+  //const char* lib_xgraphicsd = "xgraphicsd:";
   const char* lib_xhttp = "xhttp:";
   const char* lib_xhttpd = "xhttpd:";
   const char* lib_xhv2 = "xhv2:";
@@ -191,12 +262,12 @@ BOOL IsXboxLibraryFile(const char* filename)
   const char* lib_xmicd = "xmicd:";
   const char* lib_xmp = "xmp:";
   const char* lib_xmpd = "xmpd:";
-  const char* lib_xnet = "xnet:";
+  //const char* lib_xnet = "xnet:";
   const char* lib_xnetconfiginfo = "xnetconfiginfo:";
   const char* lib_xnetconfiginfod = "xnetconfiginfod:";
-  const char* lib_xnetd = "xnetd:";
-  const char* lib_xonline = "xonline:";
-  const char* lib_xonlined = "xonlined:";
+  //const char* lib_xnetd = "xnetd:";
+  //const char* lib_xonline = "xonline:";
+  //const char* lib_xonlined = "xonlined:";
   const char* lib_xparty = "xparty:";
   const char* lib_xpartyd = "xpartyd:";
   const char* lib_xrnm = "xrnm:";
@@ -232,7 +303,76 @@ BOOL IsXboxLibraryFile(const char* filename)
     return false;
 
   // todo: a lot more xbox libs!
-  return (strncasecmp(filename, lib_d3d9, strlen(lib_d3d9)) == 0 ||
+  return (strncasecmp(filename, lib_d3d8_xbox, strlen(lib_d3d8_xbox)) == 0 ||
+    strncasecmp(filename, lib_D3D8, strlen(lib_D3D8)) == 0 ||
+    strncasecmp(filename, lib_D3DX8, strlen(lib_D3DX8)) == 0 ||
+    strncasecmp(filename, lib_D3DX8d, strlen(lib_D3DX8d)) == 0 ||
+    strncasecmp(filename, lib_d3dx8dt, strlen(lib_d3dx8dt)) == 0 ||
+    strncasecmp(filename, lib_d3dxof, strlen(lib_d3dxof)) == 0 ||
+    strncasecmp(filename, lib_dxguid, strlen(lib_dxguid)) == 0 ||
+    strncasecmp(filename, lib_winhttp5, strlen(lib_winhttp5)) == 0 ||
+    strncasecmp(filename, lib_xboxdbg, strlen(lib_xboxdbg)) == 0 ||
+    strncasecmp(filename, lib_xcontent, strlen(lib_xcontent)) == 0 ||
+    strncasecmp(filename, lib_xgraphics, strlen(lib_xgraphics)) == 0 ||
+    strncasecmp(filename, lib_xonservr, strlen(lib_xonservr)) == 0 ||
+    strncasecmp(filename, lib_d3d8d, strlen(lib_d3d8d)) == 0 ||
+    strncasecmp(filename, lib_d3d8i, strlen(lib_d3d8i)) == 0 ||
+    strncasecmp(filename, lib_d3d8ltcg, strlen(lib_d3d8ltcg)) == 0 ||
+    strncasecmp(filename, lib_dmusic, strlen(lib_dmusic)) == 0 ||
+    strncasecmp(filename, lib_dmusicd, strlen(lib_dmusicd)) == 0 ||
+    strncasecmp(filename, lib_dmusici, strlen(lib_dmusici)) == 0 ||
+    strncasecmp(filename, lib_dmusicltcg, strlen(lib_dmusicltcg)) == 0 ||
+    strncasecmp(filename, lib_dsound, strlen(lib_dsound)) == 0 ||
+    strncasecmp(filename, lib_dsoundd, strlen(lib_dsoundd)) == 0 ||
+    strncasecmp(filename, lib_libc, strlen(lib_libc)) == 0 ||
+    strncasecmp(filename, lib_libcd, strlen(lib_libcd)) == 0 ||
+    strncasecmp(filename, lib_libcmt, strlen(lib_libcmt)) == 0 ||
+    strncasecmp(filename, lib_libcmtd, strlen(lib_libcmtd)) == 0 ||
+    strncasecmp(filename, lib_libcp, strlen(lib_libcp)) == 0 ||
+    strncasecmp(filename, lib_libcpd, strlen(lib_libcpd)) == 0 ||
+    strncasecmp(filename, lib_libcpmt, strlen(lib_libcpmt)) == 0 ||
+    strncasecmp(filename, lib_libcpmtd, strlen(lib_libcpmtd)) == 0 ||
+    strncasecmp(filename, lib_oldnames, strlen(lib_oldnames)) == 0 ||
+    strncasecmp(filename, lib_uix, strlen(lib_uix)) == 0 ||
+    strncasecmp(filename, lib_uixd, strlen(lib_uixd)) == 0 ||
+    strncasecmp(filename, lib_uuid, strlen(lib_uuid)) == 0 ||
+    strncasecmp(filename, lib_xacteng, strlen(lib_xacteng)) == 0 ||
+    strncasecmp(filename, lib_xactengd, strlen(lib_xactengd)) == 0 ||
+    strncasecmp(filename, lib_xactengi, strlen(lib_xactengi)) == 0 ||
+    strncasecmp(filename, lib_xactengltcg, strlen(lib_xactengltcg)) == 0 ||
+    strncasecmp(filename, lib_xapilib, strlen(lib_xapilib)) == 0 ||
+    strncasecmp(filename, lib_xapilibd, strlen(lib_xapilibd)) == 0 ||
+    strncasecmp(filename, lib_xbdm, strlen(lib_xbdm)) == 0 ||
+    strncasecmp(filename, lib_xboxkrnl, strlen(lib_xboxkrnl)) == 0 ||
+    strncasecmp(filename, lib_xgraphicsd, strlen(lib_xgraphicsd)) == 0 ||
+    strncasecmp(filename, lib_xgraphicsltcg, strlen(lib_xgraphicsltcg)) == 0 ||
+    strncasecmp(filename, lib_xkbd, strlen(lib_xkbd)) == 0 ||
+    strncasecmp(filename, lib_xkbdd, strlen(lib_xkbdd)) == 0 ||
+    strncasecmp(filename, lib_xmv, strlen(lib_xmv)) == 0 ||
+    strncasecmp(filename, lib_xmvd, strlen(lib_xmvd)) == 0 ||
+    strncasecmp(filename, lib_xnet, strlen(lib_xnet)) == 0 ||
+    strncasecmp(filename, lib_xnetd, strlen(lib_xnetd)) == 0 ||
+    strncasecmp(filename, lib_xnetn, strlen(lib_xnetn)) == 0 ||
+    strncasecmp(filename, lib_xnetnd, strlen(lib_xnetnd)) == 0 ||
+    strncasecmp(filename, lib_xnets, strlen(lib_xnets)) == 0 ||
+    strncasecmp(filename, lib_xnetsd, strlen(lib_xnetsd)) == 0 ||
+    strncasecmp(filename, lib_xonline, strlen(lib_xonline)) == 0 ||
+    strncasecmp(filename, lib_xonlined, strlen(lib_xonlined)) == 0 ||
+    strncasecmp(filename, lib_xonlinel, strlen(lib_xonlinel)) == 0 ||
+    strncasecmp(filename, lib_xonlineld, strlen(lib_xonlineld)) == 0 ||
+    strncasecmp(filename, lib_xonlinels, strlen(lib_xonlinels)) == 0 ||
+    strncasecmp(filename, lib_xonlinelsd, strlen(lib_xonlinelsd)) == 0 ||
+    strncasecmp(filename, lib_xonlinen, strlen(lib_xonlinen)) == 0 ||
+    strncasecmp(filename, lib_xonlinend, strlen(lib_xonlinend)) == 0 ||
+    strncasecmp(filename, lib_xonlines, strlen(lib_xonlines)) == 0 ||
+    strncasecmp(filename, lib_xonlinesd, strlen(lib_xonlinesd)) == 0 ||
+    strncasecmp(filename, lib_xperf, strlen(lib_xperf)) == 0 ||
+    strncasecmp(filename, lib_xsndtrk, strlen(lib_xsndtrk)) == 0 ||
+    strncasecmp(filename, lib_xsndtrkd, strlen(lib_xsndtrkd)) == 0 ||
+    strncasecmp(filename, lib_xvoice, strlen(lib_xvoice)) == 0 ||
+    strncasecmp(filename, lib_xvoiced, strlen(lib_xvoiced)) == 0 ||
+
+    strncasecmp(filename, lib_d3d9, strlen(lib_d3d9)) == 0 ||
     strncasecmp(filename, lib_d3d9d, strlen(lib_d3d9d)) == 0 ||
     strncasecmp(filename, lib_d3d9i, strlen(lib_d3d9i)) == 0 ||
     strncasecmp(filename, lib_d3d9ltcg, strlen(lib_d3d9ltcg)) == 0 ||
@@ -259,7 +399,7 @@ BOOL IsXboxLibraryFile(const char* filename)
     strncasecmp(filename, lib_nuihandlesd, strlen(lib_nuihandlesd)) == 0 ||
     strncasecmp(filename, lib_nuispeech, strlen(lib_nuispeech)) == 0 ||
     strncasecmp(filename, lib_nuispeechd, strlen(lib_nuispeechd)) == 0 ||
-    strncasecmp(filename, lib_oldnames, strlen(lib_oldnames)) == 0 ||
+    //strncasecmp(filename, lib_oldnames, strlen(lib_oldnames)) == 0 ||
     strncasecmp(filename, lib_qnetxaudio2, strlen(lib_qnetxaudio2)) == 0 ||
     strncasecmp(filename, lib_qnetxaudio2d, strlen(lib_qnetxaudio2d)) == 0 ||
     strncasecmp(filename, lib_st, strlen(lib_st)) == 0 ||
@@ -279,8 +419,8 @@ BOOL IsXboxLibraryFile(const char* filename)
     strncasecmp(filename, lib_xacta3, strlen(lib_xacta3)) == 0 ||
     strncasecmp(filename, lib_xactad3, strlen(lib_xactad3)) == 0 ||
     strncasecmp(filename, lib_xactd3, strlen(lib_xactd3)) == 0 ||
-    strncasecmp(filename, lib_xapilib, strlen(lib_xapilib)) == 0 ||
-    strncasecmp(filename, lib_xapilibd, strlen(lib_xapilibd)) == 0 ||
+    //strncasecmp(filename, lib_xapilib, strlen(lib_xapilib)) == 0 ||
+    //strncasecmp(filename, lib_xapilibd, strlen(lib_xapilibd)) == 0 ||
     strncasecmp(filename, lib_xapilibi, strlen(lib_xapilibi)) == 0 ||
     strncasecmp(filename, lib_XAPOBase, strlen(lib_XAPOBase)) == 0 ||
     strncasecmp(filename, lib_XAPOBaseD, strlen(lib_XAPOBaseD)) == 0 ||
@@ -297,16 +437,16 @@ BOOL IsXboxLibraryFile(const char* filename)
     strncasecmp(filename, lib_xavd, strlen(lib_xavd)) == 0 ||
     strncasecmp(filename, lib_xbc, strlen(lib_xbc)) == 0 ||
     strncasecmp(filename, lib_xbcd, strlen(lib_xbcd)) == 0 ||
-    strncasecmp(filename, lib_xbdm, strlen(lib_xbdm)) == 0 ||
-    strncasecmp(filename, lib_xboxkrnl, strlen(lib_xboxkrnl)) == 0 ||
+    //strncasecmp(filename, lib_xbdm, strlen(lib_xbdm)) == 0 ||
+    //strncasecmp(filename, lib_xboxkrnl, strlen(lib_xboxkrnl)) == 0 ||
     strncasecmp(filename, lib_xcam, strlen(lib_xcam)) == 0 ||
     strncasecmp(filename, lib_xcamd, strlen(lib_xcamd)) == 0 ||
     strncasecmp(filename, lib_xffb, strlen(lib_xffb)) == 0 ||
     strncasecmp(filename, lib_xffbd, strlen(lib_xffbd)) == 0 ||
     strncasecmp(filename, lib_xgetserviceendpoint, strlen(lib_xgetserviceendpoint)) == 0 ||
     strncasecmp(filename, lib_xgetserviceendpointd, strlen(lib_xgetserviceendpointd)) == 0 ||
-    strncasecmp(filename, lib_xgraphics, strlen(lib_xgraphics)) == 0 ||
-    strncasecmp(filename, lib_xgraphicsd, strlen(lib_xgraphicsd)) == 0 ||
+    //strncasecmp(filename, lib_xgraphics, strlen(lib_xgraphics)) == 0 ||
+    //strncasecmp(filename, lib_xgraphicsd, strlen(lib_xgraphicsd)) == 0 ||
     strncasecmp(filename, lib_xhttp, strlen(lib_xhttp)) == 0 ||
     strncasecmp(filename, lib_xhttpd, strlen(lib_xhttpd)) == 0 ||
     strncasecmp(filename, lib_xhv2, strlen(lib_xhv2)) == 0 ||
@@ -333,12 +473,12 @@ BOOL IsXboxLibraryFile(const char* filename)
     strncasecmp(filename, lib_xmicd, strlen(lib_xmicd)) == 0 ||
     strncasecmp(filename, lib_xmp, strlen(lib_xmp)) == 0 ||
     strncasecmp(filename, lib_xmpd, strlen(lib_xmpd)) == 0 ||
-    strncasecmp(filename, lib_xnet, strlen(lib_xnet)) == 0 ||
+    //strncasecmp(filename, lib_xnet, strlen(lib_xnet)) == 0 ||
     strncasecmp(filename, lib_xnetconfiginfo, strlen(lib_xnetconfiginfo)) == 0 ||
     strncasecmp(filename, lib_xnetconfiginfod, strlen(lib_xnetconfiginfod)) == 0 ||
-    strncasecmp(filename, lib_xnetd, strlen(lib_xnetd)) == 0 ||
-    strncasecmp(filename, lib_xonline, strlen(lib_xonline)) == 0 ||
-    strncasecmp(filename, lib_xonlined, strlen(lib_xonlined)) == 0 ||
+    //strncasecmp(filename, lib_xnetd, strlen(lib_xnetd)) == 0 ||
+    //strncasecmp(filename, lib_xonline, strlen(lib_xonline)) == 0 ||
+    //strncasecmp(filename, lib_xonlined, strlen(lib_xonlined)) == 0 ||
     strncasecmp(filename, lib_xparty, strlen(lib_xparty)) == 0 ||
     strncasecmp(filename, lib_xpartyd, strlen(lib_xpartyd)) == 0 ||
     strncasecmp(filename, lib_xrnm, strlen(lib_xrnm)) == 0 ||
