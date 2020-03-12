@@ -533,6 +533,10 @@ bool idaapi run(size_t)
         sym.addr = BADADDR;
         sym.name[0] = '\0';
         bool inStaticsSection = false;
+
+        std::string curLibName = "";
+        bool curLibIsXboxLibrary = false;
+
         while (pLine < pMapEnd)
         {
             // Skip the spaces, '\r', '\n' characters, blank lines, seek to the
@@ -675,26 +679,38 @@ bool idaapi run(size_t)
                 }
                 if (sym.type == 'f')
                 {
+
                   // force IDA to recognize addr as code, so we can add it as a library function
                   auto_make_proc(la);
                   auto_recreate_insn(la);
 
+                  if (strcmp(curLibName.c_str(), sym.libname) != 0)
+                  {
+                    curLibName = sym.libname;
+                    curLibIsXboxLibrary = IsXboxLibraryFile(sym.libname);
+                  }
+
                   flags_t flags = 0;
-                  if (IsXboxLibraryFile(sym.libname))
+
+                  if (curLibIsXboxLibrary)
                     flags |= FUNC_LIB;
+
                   if (inStaticsSection)
                     flags |= FUNC_STATICDEF;
 
-                  func_t* existing = flags != 0 ? get_func(la) : nullptr;
-                  if (existing)
+                  if (flags != 0)
                   {
-                    existing->flags |= flags;
-                    update_func(existing);
-                  }
-                  else
-                  {
-                    func_t func(la, BADADDR, flags);
-                    add_func_ex(&func);
+                    func_t* existing = get_func(la);
+                    if (existing)
+                    {
+                      existing->flags |= flags;
+                      update_func(existing);
+                    }
+                    else
+                    {
+                      func_t func(la, BADADDR, flags);
+                      add_func_ex(&func);
+                    }
                   }
                 }
             }
