@@ -45,6 +45,7 @@ typedef enum {
     FINISHING_LINE,
     COMMENT_LINE,
     SYMBOL_LINE,
+    STATICS_LINE,
 } ParseResult;
 
 typedef struct {
@@ -52,6 +53,7 @@ typedef struct {
     unsigned long addr;
     char name[MAXNAMELEN + 1];
     char type;
+    char libname[260 + 1]; // MAX_PATH
 } MAPSymbol;
 
 void closeMAP(const void * lpAddr);

@@ -19,7 +19,10 @@
 #include  <cctype>
 #include  <cassert>
 #include  <cstdlib>
-
+#include <string>
+#include <vector>
+#include <iterator>
+#include <sstream>
 #include "stdafx.h"
 
 using namespace std;
@@ -256,49 +259,47 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
       return MapFile::SKIP_LINE;
     const char* testStr2 = "Static symbols";
     if (strncasecmp(pLine, testStr2, strlen(testStr2)) == 0)
-      return MapFile::SKIP_LINE;
+      return MapFile::STATICS_LINE;
 
     // Get segment number, address, name, by pass spaces at beginning,
     // between ':' character, between address and name
     long lineCut = lineLen;
     if (lineCut > MAXNAMELEN + minLineLen)
         lineCut = MAXNAMELEN + minLineLen;
-    char * dupLine = (char *)std::malloc(lineCut+1);
-    strncpy(dupLine,pLine,lineCut);
-    dupLine[lineCut] = '\0';
-    if (strncasecmp(dupLine, ";", 1) == 0)
+    std::string testLine((const char*)pLine, lineCut);
+  /*  size_t off = std::string::npos;
+    while (off = testLine.find("  ") != std::string::npos)
     {
-        strncpy(sym.name,dupLine+1,MAXNAMELEN-1);
-        sym.name[MAXNAMELEN] = '\0';
-        std::free(dupLine);
-        return MapFile::COMMENT_LINE;
+      testLine = testLine.replace(off, 2, " ");
     }
-    sym.addr = -1;
-    unsigned long full_addr = 0;
-    sym.type = ' ';
-    char filename[512 + 1];
+    if (testLine.find(' ') == 0)
+      testLine = testLine.substr(1);*/
 
-    // Try reading symbol info with symbol type + filename
-    int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;] %08X %c %[^\t\n ;]", &sym.seg, &sym.addr, sym.name, &full_addr, &sym.type, filename);
-    if (6 != ret)
-    {
-      // Failed, try just info with filename
-      sym.type = ' ';
-      int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;] %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name, &full_addr, filename);
-      if (5 != ret)
-      {
-        // Failed, just try reading info
-        sym.type = ' ';
-        ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
-        if (3 != ret)
-        {
-          // Failed, we must have parsed to end of value/name symbols table or reached EOF
-          std::free(dupLine);
-          return MapFile::FINISHING_LINE;
-        }
-      }
-    }
-    std::free(dupLine);
+    std::istringstream iss(testLine);
+    std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
+      std::istream_iterator<std::string>());
+
+    // Parse line parts
+    if(results.size() < 3)
+      return MapFile::FINISHING_LINE; // Failed, we must have parsed to end of value/name symbols table or reached EOF
+
+    auto sepIdx = results[0].find(':');
+    sym.seg = std::stoi(results[0], 0, 0x10);
+    sym.addr = std::stoi(results[0].substr(sepIdx+1), 0, 0x10);
+
+    auto& name = results[1];
+    auto& fulladdr = results[2];
+    std::string type = "";
+    if (results.size() > 3)
+      sym.type = results[3].at(0);
+    else
+      sym.type = 0;
+
+    strcpy(sym.name, name.c_str());
+
+    auto& libname = results[results.size() - 1];
+    if (libname.length())
+      strcpy(sym.libname, libname.c_str());
 
     if ((0 == sym.seg) || (--sym.seg >= numOfSegs) ||
             (-1 == sym.addr) || (std::strlen(sym.name) == 0) )
@@ -307,6 +308,7 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
     }
     // Ensure name is NULL terminated
     sym.name[MAXNAMELEN] = '\0';
+    sym.libname[260] = '\0';
     return MapFile::SYMBOL_LINE;
 }
 
