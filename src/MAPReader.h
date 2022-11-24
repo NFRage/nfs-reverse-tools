@@ -18,6 +18,7 @@
 
 #include  <cstdio>
 
+#undef MAXNAMELEN
 #define MAXNAMELEN      2048
 #define INVALID_MAPFILE_SIZE	(0xffffffff)
 
@@ -49,11 +50,11 @@ typedef enum {
 } ParseResult;
 
 typedef struct {
-    unsigned long seg;
-    unsigned long addr;
-    char name[MAXNAMELEN + 1];
-    char type;
-    char libname[260 + 1]; // MAX_PATH
+    unsigned long seg = 0;
+    unsigned long addr = 0;
+    char name[MAXNAMELEN + 1] = {};
+    char type = 0;
+    char libname[260 + 1] = {}; // MAX_PATH
 } MAPSymbol;
 
 void closeMAP(const void * lpAddr);

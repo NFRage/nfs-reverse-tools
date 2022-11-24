@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(mapsourcegen C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 file(GLOB MAPREADER_SRC_FILE
     "src/MAPReader.h"
     "src/MAPReader.cpp"
@@ -32,3 +36,4 @@ target_link_libraries(mapsourcegen_x86 PUBLIC
 
 add_executable(files_gen "src/parser/FilesGenerator.cpp")
 target_link_libraries(files_gen PUBLIC "mapreader")
+set_target_properties(files_gen PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/working_dir")

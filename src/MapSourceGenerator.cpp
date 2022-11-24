@@ -17,19 +17,20 @@
 ///     the Free Software Foundation; either version 2 of the License, or
 ///     (at your option) any later version.
 ////////////////////////////////////////////////////////////////////////////////
-#define PLUG_VERSION "1.3"
+#define PLUG_VERSION "1.0"
 //  standard library headers.
 #include <cstdio>
 // Makes gcc stdlib to not define non-underscored versions of non-ANSI functions (ie memicmp, strlwr)
 #define _NO_OLDNAMES
 #include <cstring>
 #undef _NO_OLDNAMES
+#define USE_STANDARD_FILE_FUNCTIONS
+#include <hexrays.hpp>
 
 //  other headers.
 #include  "MAPReader.h"
 #include "stdafx.h"
 
-//#define USE_STANDARD_FILE_FUNCTIONS
 //#define USE_DANGEROUS_FUNCTIONS
 
 // IDA SDK Header Files
@@ -44,34 +45,12 @@
 #include <fpro.h>
 #include <prodir.h> // just for MAXPATH
 #include <auto.hpp>
+#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
-
-typedef struct _tagPLUGIN_OPTIONS {
-    int bNameApply;    //< true - apply to name, false - apply to comment
-    int bReplace;      //< replace the existing name or comment
-    int bVerbose;      //< show detail messages
-} PLUGIN_OPTIONS;
-
-const size_t g_minLineLen = 14; // For a "xxxx:xxxxxxxx " line
-
-static char g_szIniPath[MAXPATH] = { 0 };
-
-/// @brief Global variable for options of plugin
-static PLUGIN_OPTIONS g_options = { 0 };
-
-static const cfgopt_t g_optsinfo[] =
-{
-	cfgopt_t("NAME_APPLY", &g_options.bNameApply, 0, 1),
-    cfgopt_t("REPLACE_EXISTING", &g_options.bReplace, 0, 1),
-	cfgopt_t("VERBOSE_MESSAGES", &g_options.bVerbose, 0, 1),
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/// @name Ini Section and Key names
-/// @{
-static char g_szLoadMapSection[] = "LoadMap";
-static char g_szOptionsKey[] = "Options";
-/// @}
+hexdsp_t* hexdsp = nullptr;
 
 void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr)
 {
@@ -82,6 +61,30 @@ void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_add
     else
         sym.addr = -1;
 }
+
+typedef struct _tagPLUGIN_OPTIONS {
+    int bVerbose;      //< show detail messages
+} PLUGIN_OPTIONS;
+
+const size_t g_minLineLen = 14; // For a "xxxx:xxxxxxxx " line
+
+static char g_szIniPath[MAXPATH] = { 0 };
+
+
+/// @brief Global variable for options of plugin
+static PLUGIN_OPTIONS g_options = { 0 };
+
+static const cfgopt_t g_optsinfo[] =
+{
+	cfgopt_t("VERBOSE_MESSAGES", &g_options.bVerbose, 0, 1),
+};
+
+////////////////////////////////////////////////////////////////////////////////
+/// @name Ini Section and Key names
+/// @{
+static char g_szLoadMapSection[] = "MapSourceGen";
+static char g_szOptionsKey[] = "Options";
+/// @}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Output a formatted string to messages window [analog of printf()]
@@ -111,20 +114,13 @@ static void showOptionsDlg(void)
     // Build the format string constant used to create the dialog
     const char format[] =
         "STARTITEM 0\n"                             // TabStop
-        "LoadMap Options\n"                         // Title
-        "<Apply Map Symbols for Name:R>\n"          // Radio Button 0
-        "<Apply Map Symbols for Comment:R>>\n"    // Radio Button 1
-        "<Replace Existing Names/Comments:C>>\n"  // Checkbox Button
+        "MapSourceGen Options\n"                         // Title
         "<Show verbose messages:C>>\n\n";           // Checkbox Button
 
     // Create the option dialog.
-    short name = (g_options.bNameApply ? 0 : 1);
-    short replace = (g_options.bReplace ? 1 : 0);
     short verbose = (g_options.bVerbose ? 1 : 0);
-    if (ask_form(format, &name, &replace, &verbose))
+    if (ask_form(format, &verbose))
     {
-        g_options.bNameApply = (0 == name);
-        g_options.bReplace = (1 == replace);
         g_options.bVerbose = (1 == verbose);
     }
 }
@@ -137,15 +133,18 @@ static void showOptionsDlg(void)
  ////////////////////////////////////////////////////////////////////////////////
 plugmod_t* idaapi init(void)
 {
-    msg("\nLoadMap: Plugin v%s init.\n\n",PLUG_VERSION);
+    if ( !init_hexrays_plugin() )
+        return nullptr; // no decompiler
+    
+    msg("\nMapSourceGenerator: Plugin v%s init.\n\n",PLUG_VERSION);
 
     // Get the full path to user config dir
 	qstrncpy(g_szIniPath, get_user_idadir(), sizeof(g_szIniPath));
-	qstrncat(g_szIniPath, "loadmap.cfg", sizeof(g_szIniPath));
+	qstrncat(g_szIniPath, "mapsourcegen.cfg", sizeof(g_szIniPath));
     g_szIniPath[sizeof(g_szIniPath) - 1] = '\0';
 
     // Get options saved in cfg file
-    read_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo), NULL);
+    read_config_file("mapsourcegen", g_optsinfo, qnumber(g_optsinfo), NULL);
 
     switch (inf.filetype)
     {
@@ -161,6 +160,34 @@ plugmod_t* idaapi init(void)
     return PLUGIN_SKIP;
 }
 
+std::string makeFileName(const char* libname)
+{
+    bool bIsCPP = true;
+    const char* extString = strstr(libname, ".cpp");
+    if (extString == nullptr) {
+        extString = strstr(libname, ".c");
+        bIsCPP = false;
+        if (extString == nullptr) {
+            return {};
+        }
+    }
+
+    const char* stringBegin = extString;
+    --stringBegin;
+    while (true) {
+        if (*(stringBegin - 1) == '.' || *(stringBegin - 1) == ' ' || *(stringBegin - 1) == '\0') {
+            break;
+        }
+
+        --stringBegin;
+    }
+
+    std::string outString = std::string(stringBegin, extString - stringBegin);
+    outString += (bIsCPP ? ".cpp" : ".c");
+
+    return outString;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Plugin run function, which does the actual job
 /// @param   int    Not used
@@ -171,6 +198,8 @@ plugmod_t* idaapi init(void)
 bool idaapi run(size_t)
 {
     static char mapFileName[_MAX_PATH] = { 0 };
+
+    std::unordered_map<std::string, std::fstream> filesMap;
 
     // If user press shift key, show options dialog
     if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
@@ -192,57 +221,67 @@ bool idaapi run(size_t)
         pathExtensionSwitch(mapFileName, ".map", sizeof(mapFileName));
     }
 
+    std::string folderPath = mapFileName;
+    size_t folderOffset = folderPath.find_last_of('\\');
+    if (folderOffset == size_t(-1)) {
+        folderOffset = folderPath.find_last_of('/');
+    }
+    
+    folderPath.erase(folderOffset + 1, folderPath.size() - folderOffset - 1);
+    folderPath.append("sources/");
+
+    std::error_code err;
+    std::filesystem::remove_all(folderPath, err);
+    std::filesystem::create_directory(folderPath, err);
+    
     // Show open map file dialog
     char *fname = ask_file(0, mapFileName, "Open MAP file");
     if (NULL == fname)
     {
-        msg("LoadMap: User cancel\n");
+        msg("MapSourceGen: User cancel\n");
         return false;
     }
 
-    // Open the map file
     char * pMapStart = NULL;
-    size_t mapSize = INVALID_MAPFILE_SIZE;
-    MapFile::MAPResult eRet = MapFile::openMAP(fname, pMapStart, mapSize);
-    switch (eRet)
-    {
-        case MapFile::WIN32_ERROR:
-            warning("Could not open file '%s'.\nWin32 Error Code = 0x%08X",
-                    fname, GetLastError());
-            return false;
+	size_t mapSize = INVALID_MAPFILE_SIZE;
+	const MapFile::MAPResult eRet = MapFile::openMAP(mapFileName, pMapStart, mapSize);
+	switch (eRet) {
+	case MapFile::WIN32_ERROR:
+		printf("Could not open file '%s'.\n", mapFileName);
+		return -1;
 
-        case MapFile::FILE_EMPTY_ERROR:
-            warning("File '%s' is empty, zero size", fname);
-            return false;
+	case MapFile::FILE_EMPTY_ERROR:
+		printf("File '%s' is empty, zero size", mapFileName);
+		return -1;
 
-        case MapFile::FILE_BINARY_ERROR:
-            warning("File '%s' seem to be a binary or Unicode file", fname);
-            return false;
+	case MapFile::FILE_BINARY_ERROR:
+		printf("File '%s' seem to be a binary or Unicode file", mapFileName);
+		return -1;
 
-        case MapFile::OPEN_NO_ERROR:
-        default:
-            break;
-    }
+	case MapFile::OPEN_NO_ERROR:
+	default:
+		break;
+	}
 
-    MapFile::SectionType sectnHdr = MapFile::NO_SECTION;
-    unsigned long sectnNumber = 0;
-    unsigned long validSyms = 0;
-    unsigned long invalidSyms = 0;
+    show_wait_box("Generating sources for '%s'", fname);
 
-    // The mark pointer to the end of memory map file
-    // all below code must not read or write at and over it
-    const char * pMapEnd = pMapStart + mapSize;
+	MapFile::SectionType sectnHdr = MapFile::NO_SECTION;
+	unsigned long sectnNumber = 0;
+	unsigned long generated = 0;
+	unsigned long invalidSyms = 0;
 
-    show_wait_box("Parsing and applying symbols from the Map file '%s'", fname);
+	// The mark pointer to the end of memory map file
+	// all below code must not read or write at and over it
+	const char * pMapEnd = pMapStart + mapSize;
 
-    try
+	    try
     {
         const char * pLine = pMapStart;
         const char * pEOL = pMapStart;
         MapFile::MAPSymbol sym;
         MapFile::MAPSymbol prvsym;
-        sym.seg = SREG_NUM;
-        sym.addr = BADADDR;
+        sym.seg = 16;
+        sym.addr = -1;
         sym.name[0] = '\0';
         bool inStaticsSection = false;
 
@@ -259,7 +298,7 @@ bool idaapi run(size_t)
             pEOL = MapFile::findEOL(pLine, pMapEnd);
 
             size_t lineLen = (size_t) (pEOL - pLine);
-            if (lineLen < g_minLineLen)
+            if (lineLen < 14)
             {
                 continue;
             }
@@ -273,8 +312,7 @@ bool idaapi run(size_t)
                 if (sectnHdr != MapFile::NO_SECTION)
                 {
                     sectnNumber++;
-                    qsnprintf(fmt, sizeof(fmt), "Section start line: '%%.%ds'.\n", lineLen);
-                    showMsg(fmt, pLine);
+                    qsnprintf(fmt, sizeof(fmt), "Section start line: '%%.%ds'.\n",  (int)lineLen);
                     continue;
                 }
             } else
@@ -282,17 +320,16 @@ bool idaapi run(size_t)
                 sectnHdr = MapFile::recognizeSectionEnd(sectnHdr, pLine, lineLen);
                 if (sectnHdr == MapFile::NO_SECTION)
                 {
-                    qsnprintf(fmt, sizeof(fmt), "Section end line: '%%.%ds'.\n", lineLen);
-                    showMsg(fmt, pLine);
+                    qsnprintf(fmt, sizeof(fmt), "Section end line: '%%.%ds'.\n", (int)lineLen);
                     continue;
                 }
             }
             MapFile::ParseResult parsed;
             prvsym.seg = sym.seg;
             prvsym.addr = sym.addr;
-            qstrncpy(prvsym.name,sym.name,sizeof(sym.name));
-            sym.seg = SREG_NUM;
-            sym.addr = BADADDR;
+            qstrncpy(prvsym.name, sym.name, sizeof(sym.name));
+            sym.seg = 16;
+            sym.addr = -1;
             sym.name[0] = '\0';
             parsed = MapFile::INVALID_LINE;
 
@@ -304,170 +341,94 @@ bool idaapi run(size_t)
             case MapFile::MSVC_MAP:
             case MapFile::BCCL_NAM_MAP:
             case MapFile::BCCL_VAL_MAP:
-                parsed = parseMsSymbolLine(sym,pLine,lineLen,g_minLineLen,numOfSegs);
+                parsed = parseMsSymbolLine(sym,pLine,lineLen,14,9/*numOfSegs*/);
                 break;
             case MapFile::WATCOM_MAP:
-                parsed = parseWatcomSymbolLine(sym,pLine,lineLen,g_minLineLen,numOfSegs);
+                parsed = parseWatcomSymbolLine(sym,pLine,lineLen,14,9/*numOfSegs*/);
                 break;
             case MapFile::GCC_MAP:
-                parsed = parseGccSymbolLine(sym,pLine,lineLen,g_minLineLen,numOfSegs);
+                parsed = parseGccSymbolLine(sym,pLine,lineLen,14,9/*numOfSegs*/);
                 break;
             }
+            
             if (parsed == MapFile::STATICS_LINE)
               inStaticsSection = true;
 
             if (parsed == MapFile::SKIP_LINE || parsed == MapFile::STATICS_LINE)
             {
-                qsnprintf(fmt, sizeof(fmt), "Skipping line: '%%.%ds'.\n", lineLen);
-                showMsg(fmt, pLine);
+                qsnprintf(fmt, sizeof(fmt), "Skipping line: '%%.%ds'.\n",  (int)lineLen);
                 continue;
             }
             if (parsed == MapFile::FINISHING_LINE)
             {
                 sectnHdr = MapFile::NO_SECTION;
                 // we have parsed to end of value/name symbols table or reached EOF
-                qsnprintf(fmt, sizeof(fmt), "Parsing finished at line: '%%.%ds'.\n", lineLen);
-                showMsg(fmt, pLine);
+                qsnprintf(fmt, sizeof(fmt), "Parsing finished at line: '%%.%ds'.\n",  (int)lineLen);
                 continue;
             }
             if (parsed == MapFile::INVALID_LINE)
             {
                 invalidSyms++;
-                qsnprintf(fmt, sizeof(fmt), "Invalid map line: %%.%ds.\n", lineLen);
-                showMsg(fmt, pLine);
+                qsnprintf(fmt, sizeof(fmt), "Invalid map line: %%.%ds.\n",  (int)lineLen);
                 continue;
-            }
-            // If shouldn't apply names
-            bool bNameApply = g_options.bNameApply;
-            if (parsed == MapFile::COMMENT_LINE)
-            {
-                qsnprintf(fmt, sizeof(fmt), "Comment line: %%.%ds.\n", lineLen);
-                showMsg(fmt, pLine);
-                if (BADADDR == sym.addr)
-                    continue;
-            }
-            // Determine the DeDe map file
-            char *pname = sym.name;
-            if (('<' == pname[0]) && ('-' == pname[1]))
-            {
-                // Functions indicator symbol of DeDe map
-                pname += 2;
-                bNameApply = true;
-            }
-            else if ('*' == pname[0])
-            {
-                // VCL controls indicator symbol of DeDe map
-                pname++;
-                bNameApply = false;
-            }
-            else if (('-' == pname[0]) && ('>' == pname[1]))
-            {
-                // VCL methods indicator symbol of DeDe map
-                pname += 2;
-                bNameApply = false;
             }
 
             unsigned long la = sym.addr + getnseg((int) sym.seg)->start_ea;
             flags_t f = get_full_flags(la);
+            
+            curLibName = sym.libname;
+            curLibIsXboxLibrary = MapFile::isXboxLibraryFile(sym.libname);
+            if (sym.type == 'f') {
+                auto_make_proc(la);
+                auto_recreate_insn(la);
 
-            if (bNameApply) // Apply symbols for name
-            {
-                //  Add name if there's no meaningful name assigned.
-                if (g_options.bReplace ||
-                    (!has_name(f) || has_dummy_name(f) || has_auto_name(f)))
-                {
-                    if (set_name(la, pname, SN_NOWARN | SN_FORCE))
-                    {
-                        showMsg("%04X:%08X - Change name to '%s' succeeded\n",
-                            sym.seg, la, pname);
-                        validSyms++;
-                    }
-                    else
-                    {
-                        showMsg("%04X:%08X - Change name to '%s' failed\n",
-                            sym.seg, la, pname);
-                        invalidSyms++;
+                func_t *pfn = get_func(la);
+                if (pfn == nullptr) {
+                    continue;
+                }
+
+                hexrays_failure_t hf;
+                cfuncptr_t cfunc = decompile(pfn, &hf, DECOMP_NO_WAIT);
+                const strvec_t& sv = cfunc->get_pseudocode();
+                if (sv.empty()) {
+                    continue;
+                }
+
+                std::string fileName = makeFileName(sym.libname);
+                if (!filesMap[fileName].is_open()) {
+                    std::string filePath = folderPath + fileName;
+                    filesMap[fileName].open(filePath, std::ios::out | std::ios::binary);
+                    if (!filesMap[fileName].is_open()) {
+                        continue;
                     }
                 }
-                if (sym.type == 'f')
-                {
 
-                  // force IDA to recognize addr as code, so we can add it as a library function
-                  auto_make_proc(la);
-                  auto_recreate_insn(la);
-
-                  if (strcmp(curLibName.c_str(), sym.libname) != 0)
-                  {
-                    curLibName = sym.libname;
-                    curLibIsXboxLibrary = IsXboxLibraryFile(sym.libname);
-                  }
-
-                  flags_t flags = 0;
-
-                  if (curLibIsXboxLibrary)
-                    flags |= FUNC_LIB;
-
-                  if (inStaticsSection)
-                    flags |= FUNC_STATICDEF;
-
-                  if (flags != 0)
-                  {
-                    func_t* existing = get_func(la);
-                    if (existing)
-                    {
-                      existing->flags |= flags;
-                      update_func(existing);
-                    }
-                    else
-                    {
-                      func_t func(la, BADADDR, flags);
-                      add_func_ex(&func);
-                    }
-                  }
+                for (const auto& line : sv) {
+                    qstring buf;
+                    tag_remove(&buf, line.line);
+                    filesMap[fileName] << buf.c_str();
+                    filesMap[fileName] << "\n";
                 }
-            }
-            else if (g_options.bReplace || !has_cmt(f))
-            {
-                // Apply symbols for comment
-                if (set_cmt(la, pname, false))
-                {
-                    showMsg("%04X:%08X - Change comment to '%s' succeeded\n",
-                        sym.seg, la, pname);
-                    validSyms++;
-                }
-                else
-                {
-                    showMsg("%04X:%08X - Change comment to '%s' failed\n",
-                        sym.seg, la, pname);
-                    invalidSyms++;
-                }
+
+                filesMap[fileName] << "\n";
+                filesMap[fileName].flush();
+                generated++;
             }
         }
-
     }
     catch (...)
     {
-        warning("Exception while parsing MAP file '%s'");
+        printf("Exception while parsing MAP file");
         invalidSyms++;
     }
+
     MapFile::closeMAP(pMapStart);
+    filesMap.clear();
+    
     hide_wait_box();
+    
+    msg("results for %s file: \nGenerated function : %d\nInvalid symbols: %d", fname, generated, invalidSyms);
 
-    if (sectnNumber == 0)
-    {
-        warning("File '%s' is not a valid Map file; publics section header wasn't found", fname);
-    }
-    else
-    {
-        // Save file name for next askfile_c dialog
-        qstrncpy(mapFileName, fname, sizeof(mapFileName));
-
-        // Show the result
-        msg("Result of loading and parsing the Map file '%s'\n"
-            "   Number of Symbols applied: %d\n"
-            "   Number of Invalid Symbols: %d\n\n",
-            fname, validSyms, invalidSyms);
-    }
     return true;
 }
 
@@ -479,25 +440,18 @@ bool idaapi run(size_t)
 ////////////////////////////////////////////////////////////////////////////////
 void idaapi term(void)
 {
-    msg("LoadMap: Plugin v%s terminate.\n",PLUG_VERSION);
-
-    // Write the plugin's options to cfg file
-    /*_VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
-                                      sizeof(g_options), g_szIniPath));
-    The old, windows-centric way is now disabled. Instead, we should open g_szIniPath
-    and write config in normal IDA format (like the files in IDA/cfg filder).
-    */
+    msg("MapSourceGenerator: Plugin v%s terminate.\n",PLUG_VERSION);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name Plugin information
 /// @{
-char wanted_name[]   = "Load Symbols From MAP File";
-char wanted_hotkey[] = "Ctrl-M";
-char comment[]       = "LoadMap loads symbols from a VC/BC/Watcom/Dede map file.";
-char help[]          = "LoadMap, Visual C/Borland C/Watcom C/Dede map file import plugin."
-                              "This module reads selected map file, and loads symbols\n"
-                              "into IDA database. Click it while holding Shift to see options.";
+char wanted_name[]   = "Generate source tree from .MAP";
+char wanted_hotkey[] = "Ctrl-L";
+char comment[]       = "Generate source tree from a VC/BC/Watcom/Dede map file.";
+char help[]          = "MapSourceGenerator, Visual C/Borland C/Watcom C/Dede map file import plugin."
+                              "This module reads selected map file, and generates source tree from symbols.\n"
+                              "Click it while holding Shift to see options.";
 /// @}
 
 ////////////////////////////////////////////////////////////////////////////////

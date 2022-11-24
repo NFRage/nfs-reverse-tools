@@ -1,7 +1,15 @@
 #include <fstream>
+#include <unordered_map>
 #include <vector>
 
 #include "../MAPReader.h"
+
+void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr)
+{
+	sym.addr = linear_addr;
+}
+
+std::unordered_map<std::string, std::vector<std::pair<uint64_t, std::string>>> sym_map;
 
 std::streampos fileSize(std::fstream& stream ){
 
@@ -18,15 +26,15 @@ std::vector<char> fileData;
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2) {
-		printf("No input file provided. Aborting...");
-		return -1;
+	const char* mapFile = "test.map";	
+	if (argc >= 2) {
+		mapFile = argv[1];
 	}
 
 	std::fstream file;
-	file.open(argv[1], std::ios::in | std::ios::binary);
+	file.open(mapFile, std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
-		printf("Can't open file %s. Aborting...", argv[1]);
+		printf("Can't open file %s. Aborting...", mapFile);
 		return -1;
 	}
 
@@ -36,18 +44,18 @@ int main(int argc, char *argv[])
 
 	char * pMapStart = NULL;
 	size_t mapSize = INVALID_MAPFILE_SIZE;
-	const MapFile::MAPResult eRet = MapFile::openMAP(argv[1], pMapStart, mapSize);
+	const MapFile::MAPResult eRet = MapFile::openMAP(mapFile, pMapStart, mapSize);
 	switch (eRet) {
 	case MapFile::WIN32_ERROR:
-		printf("Could not open file '%s'.\n", argv[1]);
+		printf("Could not open file '%s'.\n", mapFile);
 		return -1;
 
 	case MapFile::FILE_EMPTY_ERROR:
-		printf("File '%s' is empty, zero size", argv[1]);
+		printf("File '%s' is empty, zero size", mapFile);
 		return -1;
 
 	case MapFile::FILE_BINARY_ERROR:
-		printf("File '%s' seem to be a binary or Unicode file", argv[1]);
+		printf("File '%s' seem to be a binary or Unicode file", mapFile);
 		return -1;
 
 	case MapFile::OPEN_NO_ERROR:
@@ -68,8 +76,8 @@ int main(int argc, char *argv[])
     {
         const char * pLine = pMapStart;
         const char * pEOL = pMapStart;
-        MapFile::MAPSymbol sym;
-        MapFile::MAPSymbol prvsym;
+        MapFile::MAPSymbol sym = {};
+        MapFile::MAPSymbol prvsym = {};
         sym.seg = 16;
         sym.addr = -1;
         sym.name[0] = '\0';
@@ -102,7 +110,7 @@ int main(int argc, char *argv[])
                 if (sectnHdr != MapFile::NO_SECTION)
                 {
                     sectnNumber++;
-                    snprintf(fmt, sizeof(fmt), "Section start line: '%%.%ds'.\n", lineLen);
+                    snprintf(fmt, sizeof(fmt), "Section start line: '%%.%ds'.\n",  (int)lineLen);
                     continue;
                 }
             } else
@@ -110,7 +118,7 @@ int main(int argc, char *argv[])
                 sectnHdr = MapFile::recognizeSectionEnd(sectnHdr, pLine, lineLen);
                 if (sectnHdr == MapFile::NO_SECTION)
                 {
-                    snprintf(fmt, sizeof(fmt), "Section end line: '%%.%ds'.\n", lineLen);
+                    snprintf(fmt, sizeof(fmt), "Section end line: '%%.%ds'.\n", (int)lineLen);
                     continue;
                 }
             }
@@ -140,25 +148,30 @@ int main(int argc, char *argv[])
                 parsed = parseGccSymbolLine(sym,pLine,lineLen,14,9/*numOfSegs*/);
                 break;
             }
+
+        	if (std::strstr(sym.libname, ".c") != nullptr) {
+        		sym_map[sym.libname].push_back({sym.addr, sym.name});
+        	}
+        	
             if (parsed == MapFile::STATICS_LINE)
               inStaticsSection = true;
 
             if (parsed == MapFile::SKIP_LINE || parsed == MapFile::STATICS_LINE)
             {
-                snprintf(fmt, sizeof(fmt), "Skipping line: '%%.%ds'.\n", lineLen);
+                snprintf(fmt, sizeof(fmt), "Skipping line: '%%.%ds'.\n",  (int)lineLen);
                 continue;
             }
             if (parsed == MapFile::FINISHING_LINE)
             {
                 sectnHdr = MapFile::NO_SECTION;
                 // we have parsed to end of value/name symbols table or reached EOF
-                snprintf(fmt, sizeof(fmt), "Parsing finished at line: '%%.%ds'.\n", lineLen);
+                snprintf(fmt, sizeof(fmt), "Parsing finished at line: '%%.%ds'.\n",  (int)lineLen);
                 continue;
             }
             if (parsed == MapFile::INVALID_LINE)
             {
                 invalidSyms++;
-                snprintf(fmt, sizeof(fmt), "Invalid map line: %%.%ds.\n", lineLen);
+                snprintf(fmt, sizeof(fmt), "Invalid map line: %%.%ds.\n",  (int)lineLen);
                 continue;
             }
         }
@@ -169,5 +182,6 @@ int main(int argc, char *argv[])
         invalidSyms++;
     }
 
+	MapFile::closeMAP(pMapStart);
 	return 0;
 }
