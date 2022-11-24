@@ -274,7 +274,7 @@ bool idaapi run(size_t)
 	// all below code must not read or write at and over it
 	const char * pMapEnd = pMapStart + mapSize;
 
-	    try
+	try
     {
         const char * pLine = pMapStart;
         const char * pEOL = pMapStart;
@@ -393,7 +393,7 @@ bool idaapi run(size_t)
                 }
 
                 hexrays_failure_t hf;
-                cfuncptr_t cfunc = decompile(pfn, &hf, DECOMP_NO_WAIT | DECOMP_ALL_BLKS);
+                cfuncptr_t cfunc = decompile(pfn, &hf, DECOMP_NO_WAIT);
                 if (cfunc == nullptr) {
                     continue;
                 }
@@ -421,9 +421,9 @@ bool idaapi run(size_t)
                         if (end_note_str != size_t(-1)) {
                             std::vector<size_t> vertices_to_delete;
 
-                            size_t counter = begin_note_str;
+                            size_t counter = begin_note_str + 1;
                             while (counter < buf.size()) {
-                                if (buf[counter] == '\'' || buf[counter] == '\`' || buf[counter] == '\0' || buf[counter] == ')') {
+                                if (buf[counter] == '\'' || buf[counter] == '\`' || buf[counter] == '\0') {
                                     break;
                                 }
 
@@ -434,14 +434,13 @@ bool idaapi run(size_t)
                                 counter++;
                             }
 
+                            if (end_note_str != size_t(-1)) {
+                                buf.remove(end_note_str, 1);
+                            }
+
                             for (auto it = vertices_to_delete.cend(); it != vertices_to_delete.cbegin(); ) {
                                 --it;
                                 buf.remove(*it, 1);
-                            }
-
-                           
-                            if (end_note_str != size_t(-1)) {
-                                buf.remove(end_note_str, 1);
                             }
 
                             buf.remove(begin_note_str, 1);
@@ -454,7 +453,7 @@ bool idaapi run(size_t)
 
                 filesMap[fileName] << "\n";
 
-                cfunc.reset();
+                //cfunc.reset();
                 generated++;
             }
         }
