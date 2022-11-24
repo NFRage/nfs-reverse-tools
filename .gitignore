@@ -50,3 +50,5 @@ Debug64/
 Release64/
 Debug/
 Release/
+include/
+lib/
