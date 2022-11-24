@@ -60,6 +60,7 @@ void closeMAP(const void * lpAddr);
 MAPResult openMAP(const char * lpszFileName, char * &lpMapAddr, size_t &dwSize);
 const char * skipSpaces(const char * pStart, const char * pEnd);
 const char * findEOL(const char * pStart, const char * pEnd);
+bool isXboxLibraryFile(const char* filename);
 MapFile::SectionType recognizeSectionStart(const char *pLine, size_t lineLen);
 MapFile::SectionType recognizeSectionEnd(MapFile::SectionType secType, const char *pLine, size_t lineLen);
 MapFile::ParseResult parseMsSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs);
