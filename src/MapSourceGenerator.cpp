@@ -175,7 +175,7 @@ std::string makeFileName(const char* libname)
     const char* stringBegin = extString;
     --stringBegin;
     while (true) {
-        if (*(stringBegin - 1) == '.' || *(stringBegin - 1) == ' ' || *(stringBegin - 1) == '\0') {
+        if (*(stringBegin - 1) == '.' || *(stringBegin - 1) == ' ' || *(stringBegin - 1) == '\0' || (stringBegin - 1) < libname) {
             break;
         }
 
@@ -248,15 +248,15 @@ bool idaapi run(size_t)
 	switch (eRet) {
 	case MapFile::WIN32_ERROR:
 		printf("Could not open file '%s'.\n", mapFileName);
-		return -1;
+		return false;
 
 	case MapFile::FILE_EMPTY_ERROR:
 		printf("File '%s' is empty, zero size", mapFileName);
-		return -1;
+		return false;
 
 	case MapFile::FILE_BINARY_ERROR:
 		printf("File '%s' seem to be a binary or Unicode file", mapFileName);
-		return -1;
+		return false;
 
 	case MapFile::OPEN_NO_ERROR:
 	default:
@@ -373,7 +373,12 @@ bool idaapi run(size_t)
                 continue;
             }
 
-            unsigned long la = sym.addr + getnseg((int) sym.seg)->start_ea;
+            segment_t* seg = getnseg((int)sym.seg);
+            if (seg == nullptr) {
+                continue;
+            }
+
+            unsigned long la = sym.addr + seg->start_ea;
             flags_t f = get_full_flags(la);
             
             curLibName = sym.libname;
@@ -388,7 +393,11 @@ bool idaapi run(size_t)
                 }
 
                 hexrays_failure_t hf;
-                cfuncptr_t cfunc = decompile(pfn, &hf, DECOMP_NO_WAIT);
+                cfuncptr_t cfunc = decompile(pfn, &hf, DECOMP_NO_WAIT | DECOMP_ALL_BLKS);
+                if (cfunc == nullptr) {
+                    continue;
+                }
+
                 const strvec_t& sv = cfunc->get_pseudocode();
                 if (sv.empty()) {
                     continue;
@@ -406,12 +415,46 @@ bool idaapi run(size_t)
                 for (const auto& line : sv) {
                     qstring buf;
                     tag_remove(&buf, line.line);
+                    size_t begin_note_str = buf.find('\`');
+                    if (begin_note_str != size_t(-1) && begin_note_str != 0) {
+                        size_t end_note_str = buf.find('\'', begin_note_str + 1);
+                        if (end_note_str != size_t(-1)) {
+                            std::vector<size_t> vertices_to_delete;
+
+                            size_t counter = begin_note_str;
+                            while (counter < buf.size()) {
+                                if (buf[counter] == '\'' || buf[counter] == '\`' || buf[counter] == '\0' || buf[counter] == ')') {
+                                    break;
+                                }
+
+                                if (buf[counter] == ' ') {
+                                    vertices_to_delete.push_back(counter);
+                                }
+
+                                counter++;
+                            }
+
+                            for (auto it = vertices_to_delete.cend(); it != vertices_to_delete.cbegin(); ) {
+                                --it;
+                                buf.remove(*it, 1);
+                            }
+
+                           
+                            if (end_note_str != size_t(-1)) {
+                                buf.remove(end_note_str, 1);
+                            }
+
+                            buf.remove(begin_note_str, 1);
+                        }
+                    }
+
                     filesMap[fileName] << buf.c_str();
                     filesMap[fileName] << "\n";
                 }
 
                 filesMap[fileName] << "\n";
-                filesMap[fileName].flush();
+
+                cfunc.reset();
                 generated++;
             }
         }
